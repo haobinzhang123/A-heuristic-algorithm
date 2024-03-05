@@ -66,30 +66,28 @@ while t<Max_iteration
     if L>1
         %%  emit electromagnetic waves
         theta=-(5*t/Max_iteration-2)./sqrt(25+25*(5*t/Max_iteration-2).^2)+0.8;
-        WPos_copy = repmat(Best_Pos, 1, size(W1,2)); 
+        WPos_copy = repmat(Best_Pos, 1, size(W1,2));
         distances = abs(W1 - WPos_copy);
-       [~, index] = sort(distances,2);            
-       new_W1 = zeros(size(W1));
-       random_values1 = randn(size(W1, 1), size(W1, 2));
-       random_values = sort(random_values1, 2); % 对每一行进行排序
-      for i = 1:size(W1, 2)
-        for j=1:size(W1, 1)
-        new_W1(j,i) = Best_Pos(j) + (W1(j,i) - Best_Pos(j)) .* (1 + random_values(j,index(j,i)))./theta;
+        [~, index] = sort(distances,2);
+        new_W1 = zeros(size(W1));
+        random_values1 = randn(size(W1, 1), size(W1, 2));
+        random_values = sort(random_values1, 2);
+        for i = 1:size(W1, 2)
+            for j=1:size(W1, 1)
+                new_W1(j,i) = Best_Pos(j) + (W1(j,i) - Best_Pos(j)) .* (1 + random_values(j,index(j,i)))./theta;
+            end
         end
-      end
-        
-       
         for i=1:W1n
             ub_flag=new_W1(:,i)>ub;
             lb_flag=new_W1(:,i)<lb;
             new_W1(:,i)=new_W1(:,i).*(~(ub_flag+lb_flag))+(lb+rand(dim,1).*(ub-lb)).*ub_flag+(lb+rand(dim,1).*(ub-lb)).*lb_flag;
         end
         for i=1:W1n
-            Fitness_W1(i)=fobj((W1(:,i))');  
+            Fitness_W1(i)=fobj((W1(:,i))');
         end
         Fmax=max(Fitness_W1);
         for i=1:W1n
-            f=fobj((new_W1(:,i))');   
+            f=fobj((new_W1(:,i))');
             if f<Fmax
                 Fitness_W1(i)=f;
                 W1(:,i)=new_W1(:,i);
@@ -131,7 +129,7 @@ while t<Max_iteration
         
         for i=1:W2n
             t1=0.75+exp(-i/W2n) ;
-            new_W2(:,i)=-t1*randn*cos((pi*i)/W2n)*(W2_Pos-W2(:,i))+0.8*W2(:,i);
+            new_W2(:,i)=-t1*randn*cos((pi*i)/W2n)*(Best_Pos-W2(:,i))+0.8*W2(:,i);
             ub_flag=W2(:,i)>ub;
             lb_flag=W2(:,i)<lb;
             new_W2(:,i)=new_W2(:,i).*(~(ub_flag+lb_flag))+(lb+rand(dim,1).*(ub-lb)).*ub_flag+(lb+rand(dim,1).*(ub-lb)).*lb_flag;
@@ -249,7 +247,7 @@ while t<Max_iteration
             L=L+1;
         end
     end
-    t=t+1;  
+    t=t+1;
     WSA_curve(t)=Group_Best_Score;
 end
 
