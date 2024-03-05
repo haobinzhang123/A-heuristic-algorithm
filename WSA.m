@@ -66,24 +66,19 @@ while t<Max_iteration
     if L>1
         %%  emit electromagnetic waves
         theta=-(5*t/Max_iteration-2)./sqrt(25+25*(5*t/Max_iteration-2).^2)+0.8;
-        W11=W1(:,1:W1n/2);
-        W12=W1(:,W1n/2+1:W1n);
-        B=Best_Pos;
-        distances1 = sqrt(sum((W11 - B).^2, 1));
-        [~, sorted_indices1] = sort(distances1);
-        new_W11 = zeros(size(W11));
-        random_values1 = 1.5 * randn(size(W11, 1), size(W11, 2)) ;
-        for i = 1:size(W11, 2)
-            new_W11(:,i) = B + (W1(:,sorted_indices1(i)) - B) .* (1 + random_values1(:,i))/theta;
+        WPos_copy = repmat(Best_Pos, 1, size(W1,2)); 
+        distances = abs(W1 - WPos_copy);
+       [~, index] = sort(distances,2);            
+       new_W1 = zeros(size(W1));
+       random_values1 = randn(size(W1, 1), size(W1, 2));
+       random_values = sort(random_values1, 2); % 对每一行进行排序
+      for i = 1:size(W1, 2)
+        for j=1:size(W1, 1)
+        new_W1(j,i) = Best_Pos(j) + (W1(j,i) - Best_Pos(j)) .* (1 + random_values(j,index(j,i)))./theta;
         end
-        distances2 = sqrt(sum((W12 - B).^2, 1));
-        [~, sorted_indices2] = sort(distances2);
-        new_W12 = zeros(size(W12));
-        random_values2 = 2 * randn(size(W12, 1), size(W12, 2)) ;
-        for i = 1:size(W12, 2)
-            new_W12(:,i) = B + (W12(:,sorted_indices2(i)) - B) .* (1 + random_values2(:,i))/theta;
-        end
-        new_W1=[new_W11,new_W12];
+      end
+        
+       
         for i=1:W1n
             ub_flag=new_W1(:,i)>ub;
             lb_flag=new_W1(:,i)<lb;
