@@ -1,11 +1,9 @@
-function [Group_Best_Score,Group_Best_Pos,WSA_curve]=WSA(N,T,lb,ub,dim,fobj)
-
+function [Group_Best_Score,Group_Best_Pos,WAR_curve]=WSA0(N,T,lb,ub,dim,fobj)
 ub = ub.*ones(dim,1);
 lb = lb.*ones(dim,1);
 W1n=0.4*N;
 W2n=0.2*N;
 W3n=0.4*N;
-
 %% initialization
 WSA_curve=zeros(1,T);
 random_nums = rand(dim,N);
@@ -19,6 +17,9 @@ W=lb+uniform_nums.*(ub-lb);
 for i=1:N
     Fitness_W(i)=fobj((W(:,i))');
 end
+Fitness_W1= Fitness_W(1:W1n);
+Fitness_W2= Fitness_W(W1n+1:W1n+W2n);
+Fitness_W3= Fitness_W(W1n+W2n+1:N);
 [A,index]=sort(Fitness_W);
 Best_Pos=W(:,index(1));
 Best_Score=A(1);
@@ -31,12 +32,11 @@ W3_Score=A(1);
 Group_Best_Pos=Best_Pos;
 Group_Best_Score=Best_Score;
 W1=W(:,index(1:W1n));
-W2=W(:,index(W1n+1:W1n+W2n));
-W3=W(:,index(W1n+W2n+1:N));
-
+W2=W(:,index(W1n+1:W2n+W1n));
+W3=W(:,index(W2n+W1n+1:N));
 F=[Best_Score];
 WB=[Best_Pos];
-t=1;
+t=0;
 L=0;
 %% Start Iteration
 while t<T
@@ -72,9 +72,9 @@ while t<T
         new_W1 = zeros(size(W1));
         random_values1 = randn(size(W1, 1), size(W1, 2));
         random_values = sort(random_values1, 2);
-        for i = 1:size(W1, 2)
-            for j=1:size(W1, 1)
-                new_W1(j,i) = Best_Pos(j) + (W1(j,i) - Best_Pos(j)) .* (1 + random_values(j,index(j,i)))./theta;
+        for j = 1:size(W1, 2)
+            for i=1:size(W1, 1)
+                new_W1(i,j) = Best_Pos(i) + (W1(i,j) - Best_Pos(i)) .* (1 + random_values(i,index(i,j)))./theta;
             end
         end
         for i=1:W1n
@@ -83,12 +83,8 @@ while t<T
             new_W1(:,i)=new_W1(:,i).*(~(ub_flag+lb_flag))+(lb+rand(dim,1).*(ub-lb)).*ub_flag+(lb+rand(dim,1).*(ub-lb)).*lb_flag;
         end
         for i=1:W1n
-            Fitness_W1(i)=fobj((W1(:,i))');
-        end
-        Fmax=max(Fitness_W1);
-        for i=1:W1n
             f=fobj((new_W1(:,i))');
-            if f<Fmax
+            if f<max(Fitness_W1)
                 Fitness_W1(i)=f;
                 W1(:,i)=new_W1(:,i);
             end
@@ -102,8 +98,12 @@ while t<T
             Best_Pos=W1_Pos;
         end
         for i=1:W1n
-            q=2+(1.5-2)*cos((pi*t)/2*T);
-            new_W1(:,i)=W1(:,i)+q*rand*(W1_Pos-W1(:,i));
+            A =  W1(:,i);
+            indices = randperm(dim, floor(dim*rand+1));
+            C = zeros(dim, 1);
+            C(indices) = A(indices);
+            C(setdiff(1:dim, indices)) = Best_Pos(setdiff(1:dim, indices));
+            new_W1(:,i)=C;
         end
         for i=1:W1n
             f=fobj((new_W1(:,i))');
@@ -116,42 +116,41 @@ while t<T
                 W1_Pos=new_W1(:,i);
             end
         end
+        if W1_Score<Best_Score
+            Best_Score=W1_Score;
+            Best_Pos=W1_Pos;
+        end
+        if W1_Score<Best_Score
+            Best_Score=W1_Score;
+            Best_Pos=W1_Pos;
+        end
         [~,indexc]=sort(Fitness_W1);
         W1=W1(:,indexc);
-        half_lengthc = floor(size(W1, 2)/4);
+        half_lengthc = floor(size(W1, 2)/2);
         %% reflected electromagnetic waves
-        for i=1:W2n
-            Fitness_W2(i)=fobj((W2(:,i))');
-        end
         [~,index1]=sort(Fitness_W2);
         W2= W2(:, index1);
-        
         for i=1:W2n
             t1=0.75+exp(-i/W2n) ;
-            new_W2(:,i)=-t1*randn*cos((pi*i)/W2n)*(Best_Pos-W2(:,i))+0.8*W2(:,i);
+            W2(:,i)=-t1*randn*cos((pi*i)/W2n)*(Best_Pos-W2(:,i))+0.8*W2(:,i);
             ub_flag=W2(:,i)>ub;
             lb_flag=W2(:,i)<lb;
-            new_W2(:,i)=new_W2(:,i).*(~(ub_flag+lb_flag))+(lb+rand(dim,1).*(ub-lb)).*ub_flag+(lb+rand(dim,1).*(ub-lb)).*lb_flag;
+            W2(:,i)=(W2(:,i).*(~(ub_flag+lb_flag)))+ub.*ub_flag+lb.*lb_flag;
         end
-        
         for i=1:W2n
-            f=fobj((new_W2(:,i))');
-            if f<Fitness_W2(i)
-                Fitness_W2(i)=f;
-                W2(:,i)=new_W2(:,i);
-                if f<W2_Score
-                    W2_Score=f;
-                    W2_Pos=new_W2(:,i);
-                end
+            Fitness_W2(i)=fobj((W2(:,i))');
+            if Fitness_W2(i)<W2_Score
+                W2_Score=Fitness_W2(i);
+                W2_Pos=W2(:,i);
             end
         end
         if W2_Score<Best_Score
             Best_Score=W2_Score;
             Best_Pos=W2_Pos;
         end
-         [~,indexb]=sort(Fitness_W2);
+        [~,indexb]=sort(Fitness_W2);
         W2=W2(:,indexb);
-        half_lengthb = floor(size(W2, 2)/4);
+        half_lengthb = floor(size(W2, 2)/2);
         
         %%  receive electromagnetic waves
         for i=1:W3n
@@ -159,9 +158,9 @@ while t<T
         end
         lamda=((2*t)/T-0.7)/(0.78+abs((2*t)/T-0.7))+1;
         for i=1:W3n
-            if rand>0.005
+            if rand>0.05
                 u1=0.6+(1.2-0.5)*sin((pi*t)/(2*T));
-                new_W3(:,i)=W3(:,i)+u1*rand*(Best_Pos-W3(:,i))+randn*cos((pi*i)/W3n)*(W2_Pos-W3(:,i));
+                new_W3(:,i)=W3(:,i)+u1*rand*(Best_Pos-W3(:,i))+randn*cos((pi*i)/W3n)*(W3_Pos-W3(:,i));
             else
                 kernel= 1/size(WB,2)*ones(1, size(WB,2));
                 Px = conv2(WB, kernel, 'valid');
@@ -188,10 +187,11 @@ while t<T
         end
         [~,indexd]=sort(Fitness_W3);
         W3=W3(:,indexd);
-        half_lengthd = floor(size(W3, 2)/4);
-        W1(:, (size(W1, 2)-half_lengthc/2)+1:end) = W3(:, 1:half_lengthd/2);
-        W2(:, (size(W2, 2)-half_lengthb)+1:end) = W3(:, 1:half_lengthd/2);
-        W=[W1,W2,W3];
+        half_lengthd = floor(size(W3, 2)/2);
+        W2(:, half_lengthb+1:end) = W3(:, 1:half_lengthd/2);
+        W1(:, half_lengthc+1:end) = W3(:, 1:half_lengthd);
+        W=[W2,W1,W3];
+        
         %% Fitted gradient descent method
         alpha=0.3*ones(1,N);
         G1=[];
@@ -236,8 +236,8 @@ while t<T
         
     end
     Group_Best_Score=Best_Score;
+    Group_Best_Pos=Best_Pos;
     disp( ['Best_Score',num2str(Group_Best_Score)])
-    Group_Best_Pos=Best_Pos';
     F=[F,Group_Best_Score];
     WB=[WB,Best_Pos];
     if t>1
@@ -245,8 +245,8 @@ while t<T
             L=L+1;
         end
     end
-    t=t+1;
-    WSA_curve(t)=Group_Best_Score;
+    t=t+1; 
+    WAR_curve(t)=Group_Best_Score;
 end
-
+end
 
