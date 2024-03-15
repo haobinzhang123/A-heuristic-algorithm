@@ -1,4 +1,4 @@
-function [Group_Best_Score,Group_Best_Pos,WSA_curve]=WSA(N,Max_iteration,lb,ub,dim,fobj)
+function [Group_Best_Score,Group_Best_Pos,WSA_curve]=WSA(N,T,lb,ub,dim,fobj)
 
 ub = ub.*ones(dim,1);
 lb = lb.*ones(dim,1);
@@ -7,7 +7,7 @@ W2n=0.2*N;
 W3n=0.4*N;
 
 %% initialization
-WSA_curve=zeros(1,Max_iteration);
+WSA_curve=zeros(1,T);
 random_nums = rand(dim,N);
 uniform_nums = cumsum(random_nums,2) ./ max(cumsum(random_nums,2),[],2);
 [m, t] = size(uniform_nums);
@@ -39,7 +39,7 @@ WB=[Best_Pos];
 t=1;
 L=0;
 %% Start Iteration
-while t<Max_iteration
+while t<T
     Wmax=max(W,[],2);
     Wmin=min(W,[],2);
     for j=1:N
@@ -63,9 +63,9 @@ while t<Max_iteration
         Best_Pos=W(:,index(1));
         Best_Score=F_x1(1);
     end
-    if L>1
+    if L>1||t>0.1*T
         %%  emit electromagnetic waves
-        theta=-(5*t/Max_iteration-2)./sqrt(25+25*(5*t/Max_iteration-2).^2)+0.8;
+        theta=-(5*t/T-2)./sqrt(25+25*(5*t/T-2).^2)+0.8;
         WPos_copy = repmat(Best_Pos, 1, size(W1,2));
         distances = abs(W1 - WPos_copy);
         [~, index] = sort(distances,2);
@@ -102,7 +102,7 @@ while t<Max_iteration
             Best_Pos=W1_Pos;
         end
         for i=1:W1n
-            q=2+(1.5-2)*cos((pi*t)/2*Max_iteration);
+            q=2+(1.5-2)*cos((pi*t)/2*T);
             new_W1(:,i)=W1(:,i)+q*rand*(W1_Pos-W1(:,i));
         end
         for i=1:W1n
@@ -116,10 +116,6 @@ while t<Max_iteration
                 W1_Pos=new_W1(:,i);
             end
         end
-        [~,indexc]=sort(Fitness_W1);
-        W1=W1(:,indexc);
-        half_lengthc = floor(size(W1, 2)/2);
-        
         %% reflected electromagnetic waves
         for i=1:W2n
             Fitness_W2(i)=fobj((W2(:,i))');
@@ -150,18 +146,18 @@ while t<Max_iteration
             Best_Score=W2_Score;
             Best_Pos=W2_Pos;
         end
-        [~,indexb]=sort(Fitness_W2);
+         [~,indexb]=sort(Fitness_W2);
         W2=W2(:,indexb);
-        half_lengthb = floor(size(W2, 2)/2);
+        half_lengthb = floor(size(W2, 2)/4);
         
         %%  receive electromagnetic waves
         for i=1:W3n
             Fitness_W3(i)=fobj((W3(:,i))');
         end
-        lamda=((2*t)/Max_iteration-0.7)/(0.78+abs((2*t)/Max_iteration-0.7))+1;
+        lamda=((2*t)/T-0.7)/(0.78+abs((2*t)/T-0.7))+1;
         for i=1:W3n
             if rand>0.005
-                u1=0.6+(1.2-0.5)*sin((pi*t)/(2*Max_iteration));
+                u1=0.6+(1.2-0.5)*sin((pi*t)/(2*T));
                 new_W3(:,i)=W3(:,i)+u1*rand*(Best_Pos-W3(:,i))+randn*cos((pi*i)/W3n)*(W2_Pos-W3(:,i));
             else
                 kernel= 1/size(WB,2)*ones(1, size(WB,2));
@@ -189,10 +185,9 @@ while t<Max_iteration
         end
         [~,indexd]=sort(Fitness_W3);
         W3=W3(:,indexd);
-        half_lengthd = floor(size(W3, 2)/2);
+        half_lengthd = floor(size(W3, 2)/8);
         
-        W2(:, half_lengthb+1:end) = W3(:, 1:half_lengthd/2);
-        W1(:, half_lengthc+1:end) = W3(:, 1:half_lengthd);
+        W2(:, (size(W2, 2)-half_lengthb)+1:end) = W3(:, 1:half_lengthd);
         W=[W1,W2,W3];
         %% Fitted gradient descent method
         alpha=0.3*ones(1,N);
