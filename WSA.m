@@ -116,6 +116,9 @@ while t<T
                 W1_Pos=new_W1(:,i);
             end
         end
+        [~,indexc]=sort(Fitness_W1);
+        W1=W1(:,indexc);
+        half_lengthc = floor(size(W1, 2)/4);
         %% reflected electromagnetic waves
         for i=1:W2n
             Fitness_W2(i)=fobj((W2(:,i))');
@@ -185,9 +188,9 @@ while t<T
         end
         [~,indexd]=sort(Fitness_W3);
         W3=W3(:,indexd);
-        half_lengthd = floor(size(W3, 2)/8);
-        
-        W2(:, (size(W2, 2)-half_lengthb)+1:end) = W3(:, 1:half_lengthd);
+        half_lengthd = floor(size(W3, 2)/4);
+        W1(:, (size(W1, 2)-half_lengthc/2)+1:end) = W3(:, 1:half_lengthd/2);
+        W2(:, (size(W2, 2)-half_lengthb)+1:end) = W3(:, 1:half_lengthd/2);
         W=[W1,W2,W3];
         %% Fitted gradient descent method
         alpha=0.3*ones(1,N);
